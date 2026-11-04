@@ -1,0 +1,192 @@
+---
+title: "Enrichment analysis with perturbation signatures"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Enrichment analysis with perturbation signatures}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4)
+```
+
+`pertsig` provides perturbation signatures: per-gene logistic regression
+weights that describe the transcriptional response to a perturbation (a
+drug, a cytokine, a gene knockout and so on). `getGeneSets()` turns each
+signature into gene sets of its top-weighted genes, which can be tested
+against a differential expression (DE) profile with
+[fgsea](https://bioconductor.org/packages/fgsea/).
+
+## Installation
+
+```{r, eval = FALSE}
+# install.packages("remotes")
+remotes::install_github("alserglab/pertsig")
+```
+
+```{r, message = FALSE}
+library(pertsig)
+library(fgsea)
+library(GEOquery)
+library(limma)
+library(data.table)
+library(ggplot2)
+```
+
+## Loading signatures
+
+Signatures are available for human (`"hsa"`) and mouse (`"mmu"`). The file
+is downloaded once and cached. Rows can be named by gene symbol or Entrez ID;
+here we use gene symbols to match the microarray annotation below.
+
+```{r}
+signatures <- loadSignatures("hsa", geneId = "symbol")
+dim(signatures)
+head(colnames(signatures), 10)
+```
+
+Each column is one perturbation. Weights are signed: positive weights mark genes that go up after the perturbation and
+negative weights mark genes that go down.
+
+```{r}
+ggplot(data.frame(weight = signatures[, "IFNG"]), aes(weight)) +
+    geom_histogram(bins = 100) +
+    labs(title = "IFNG signature weights", x = "Weight", y = "Genes")
+```
+
+The top 50 genes of the IFNG signature:
+
+```{r}
+getGeneSets(signatures, topK = 50)[["IFNG"]]
+```
+
+## Example dataset
+
+[GSE41291](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE41291) is a
+microarray time course of the HSG cell line, untreated or treated with
+IFN-alpha or IFN-gamma, in triplicate. We use the 4-hour samples and make two
+DE comparisons: IFN-alpha vs untreated and IFN-gamma vs untreated.
+
+```{r, message = FALSE}
+gse <- getGEO("GSE41291", AnnotGPL = TRUE)[[1]]
+gse$condition <- sub("^HSG (\\S+) .*$", "\\1", gse$title)
+gse$time <- sub("^HSG \\S+ (\\S+) rep\\d+$", "\\1", gse$title)
+
+gse4hr <- gse[, gse$time == "4hr"]
+table(gse4hr$condition)
+```
+
+## Differential expression
+
+```{r}
+condition <- factor(gse4hr$condition, levels = c("untreated", "IFNalpha", "IFNgamma"))
+design <- model.matrix(~ 0 + condition)
+colnames(design) <- levels(condition)
+
+contrasts <- makeContrasts(IFNalpha = IFNalpha - untreated,
+                           IFNgamma = IFNgamma - untreated,
+                           levels = design)
+fit <- lmFit(gse4hr, design)
+fit <- eBayes(contrasts.fit(fit, contrasts))
+```
+
+fgsea needs one statistic per gene. We use the limma t-statistic, drop
+probes without a unique gene symbol and keep the most highly expressed probe
+of each gene:
+
+```{r}
+getRanks <- function(fit, contrast) {
+    de <- as.data.table(topTable(fit, coef = contrast, number = Inf))
+    de <- de[!is.na(Gene.symbol) & Gene.symbol != "" &
+                 !grepl("///", Gene.symbol, fixed = TRUE)]
+    de <- de[order(-AveExpr)][!duplicated(Gene.symbol)]
+    setNames(de$t, de$Gene.symbol)
+}
+
+ranks <- list(IFNalpha = getRanks(fit, "IFNalpha"),
+              IFNgamma = getRanks(fit, "IFNgamma"))
+lengths(ranks)
+```
+
+## Making gene sets
+
+`getGeneSets()` takes the `topK` genes with the largest weights in each
+signature, which are the genes that go up after the perturbation. Use
+`direction = "down"` for the genes that go down, or `direction = "both"`
+for both (`_UP` and `_DN` sets). Passing the genes of the DE profile as
+`universe` picks the top genes among those that fgsea can use, so every
+gene set keeps `topK` genes. Both comparisons come from the same arrays, so
+they share one gene universe.
+
+```{r}
+geneSets <- getGeneSets(signatures, topK = 100, universe = names(ranks$IFNalpha))
+length(geneSets)
+```
+
+A positive NES means the DE profile goes the same way as the perturbation;
+a negative NES means it goes the opposite way.
+
+## Running fgsea
+
+```{r}
+set.seed(42)
+fgseaRes <- lapply(ranks, function(stats) {
+    fgsea(pathways = geneSets, stats = stats)
+})
+```
+
+```{r}
+plotTopSignatures <- function(fgseaRes, stats) {
+    topUp <- fgseaRes[ES > 0][head(order(pval), n = 10), pathway]
+    topDown <- fgseaRes[ES < 0][head(order(pval), n = 10), pathway]
+    plotGseaTable(geneSets[c(topUp, rev(topDown))], stats, fgseaRes, gseaParam = 0.5)
+}
+```
+
+### IFN-alpha vs untreated
+
+```{r}
+head(fgseaRes$IFNalpha[order(pval)], 10)
+```
+
+```{r, fig.height = 6}
+plotTopSignatures(fgseaRes$IFNalpha, ranks$IFNalpha)
+```
+
+```{r}
+plotEnrichment(geneSets[["GENE_FAMILY_IFNA"]], ranks$IFNalpha) +
+    labs(title = "GENE_FAMILY_IFNA", subtitle = "IFN-alpha vs untreated")
+```
+
+### IFN-gamma vs untreated
+
+```{r}
+head(fgseaRes$IFNgamma[order(pval)], 10)
+```
+
+```{r, fig.height = 6}
+plotTopSignatures(fgseaRes$IFNgamma, ranks$IFNgamma)
+```
+
+```{r}
+plotEnrichment(geneSets[["IFNG"]], ranks$IFNgamma) +
+    labs(title = "IFNG", subtitle = "IFN-gamma vs untreated")
+```
+
+## Mouse signatures
+
+Mouse signatures are loaded the same way. The top 50 genes of the
+IFNG signature:
+
+```{r}
+mouseSignatures <- loadSignatures("mmu", geneId = "symbol")
+dim(mouseSignatures)
+getGeneSets(mouseSignatures, topK = 50)[["IFNG"]]
+```
+
+## Session info
+
+```{r}
+sessionInfo()
+```

@@ -1,0 +1,17 @@
+url: https://alserglab.github.io/pertsig/
+template:
+  bootstrap: 5
+
+reference:
+  - title: Loading signatures
+    contents:
+      - loadSignatures
+  - title: Gene sets
+    contents:
+      - getGeneSets
+
+articles:
+  - title: Tutorial
+    navbar: ~
+    contents:
+      - pertsig-tutorial
