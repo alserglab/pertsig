@@ -1,8 +1,26 @@
-# pertsig
+# Pertsig
 
-Perturbation signatures from <https://alserglab.wustl.edu/files/pertsig/>
-as gene sets for enrichment analysis with
+PertSig -- a data-driven collection of transcriptional perturbation signatures for human and mouse
+
+The `pertsig` R package loads the signatures
+and turns them into gene sets for enrichment analysis with
 [fgsea](https://bioconductor.org/packages/fgsea/).
+
+## Data
+
+The signatures are available on Zenodo:
+**<https://zenodo.org/records/23986547>**
+
+| Species | Signatures | Genes |
+|---------|-----------:|------:|
+| Human (`hsa`) | 165 | 9,733 |
+| Mouse (`mmu`) | 266 | 9,625 |
+
+You can get the data in two ways:
+
+- **Download the files** from the Zenodo record and use them with any tool.
+- **Load them in R with this package.** `loadSignatures()` downloads the file
+  on the first call and reads it from the local cache afterwards.
 
 ## Installation
 
@@ -24,5 +42,8 @@ geneSets <- getGeneSets(signatures, topK = 200, universe = names(exampleRanks))
 fgsea(geneSets, exampleRanks)
 ```
 
-See the [tutorial](https://alserglab.github.io/pertsig/articles/pertsig-tutorial.html)
-for a full example.
+See the [tutorial](https://alserglab.github.io/pertsig/articles/pertsig-tutorial.html) for a full example.
+
+## Citation
+
+Nugmanova, A., & Sergushichev, A. (2026). PertSig—a data-driven collection of transcriptional perturbation signatures for human and mouse [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.23986547

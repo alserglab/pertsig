@@ -1,10 +1,10 @@
-signaturesBaseUrl <- "https://alserglab.wustl.edu/files/pertsig/"
+signaturesBaseUrl <- "https://zenodo.org/records/23986547/files/"
 
 #' Load perturbation signatures
 #'
 #' Reads the perturbation signatures (per-gene logistic regression
-#' coefficients) for human or mouse. The CSV file is downloaded from
-#' <https://alserglab.wustl.edu/files/pertsig/> on the first call and read
+#' coefficients) for human or mouse. The TSV file is downloaded from
+#' <https://zenodo.org/records/23986547/> on the first call and read
 #' from the cache afterwards.
 #'
 #' @param species Species code: `"hsa"` (human) or `"mmu"` (mouse).
@@ -58,7 +58,7 @@ loadSignatures <- function(species = c("hsa", "mmu"),
 #' @keywords internal
 #' @noRd
 downloadSignatures <- function(species, cacheDir, force = FALSE) {
-    fileName <- sprintf("logreg_signatures_%s.csv", species)
+    fileName <- sprintf("logreg_signatures_%s.tsv", species)
     path <- file.path(cacheDir, fileName)
     if (file.exists(path) && !force) {
         return(path)
@@ -69,7 +69,7 @@ downloadSignatures <- function(species, cacheDir, force = FALSE) {
     on.exit(options(oldOptions), add = TRUE)
 
     partialPath <- paste0(path, ".part")
-    utils::download.file(paste0(signaturesBaseUrl, fileName),
+    utils::download.file(paste0(signaturesBaseUrl, fileName, "?download=1"),
                          destfile = partialPath, mode = "wb")
     file.rename(partialPath, path)
     path
