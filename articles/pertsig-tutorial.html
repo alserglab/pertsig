@@ -80,6 +80,8 @@ expression (DE) profile with <a href="https://bioconductor.org/packages/fgsea/" 
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/alserglab/pertsig" class="external-link">pertsig</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/alserglab/fgsea/" class="external-link">fgsea</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/seandavi/GEOquery" class="external-link">GEOquery</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: replacing previous import 'S4Arrays::makeNindexFromArrayViewport' by</span></span>
+<span><span class="co">#&gt; 'DelayedArray::makeNindexFromArrayViewport' when loading 'SummarizedExperiment'</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bioinf.wehi.edu.au/limma/" class="external-link">limma</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://r-datatable.com" class="external-link">data.table</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span></code></pre></div>
@@ -106,26 +108,28 @@ the microarray annotation below.</p>
 <span><span class="co">#&gt;  [8] "5_AZA_2_DEOXYCYTIDINE"               </span></span>
 <span><span class="co">#&gt;  [9] "5_AZACYTIDINE"                       </span></span>
 <span><span class="co">#&gt; [10] "5_FLUOROURACIL"</span></span></code></pre></div>
-<p>Each column is one perturbation. Weights are signed: positive weights
-mark genes that go up after the perturbation and negative weights mark
-genes that go down.</p>
+<p>Each column is one signature, that could include one or several
+perturbations (that were megered together because they couldn’t be
+reliably distinguished). Weights are signed: positive weights mark genes
+that go up after the perturbation and negative weights mark genes that
+go down. For gene-related signatures, the positive direction corresponds
+to up-regulated genes in the gene-activating perturbations (e.g.,
+overexpression) and down-regulated in the gene-inhibiting perturbations
+(e.g., gene knockout).</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>weight <span class="op">=</span> <span class="va">signatures</span><span class="op">[</span>, <span class="st">"IFNG"</span><span class="op">]</span><span class="op">)</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">weight</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<code class="sourceCode R"><span><span class="va">weights</span> <span class="op">&lt;-</span> <span class="va">signatures</span><span class="op">[</span>, <span class="st">"IFNG"</span><span class="op">]</span></span>
+<span><span class="va">topSets</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/getGeneSets.html">getGeneSets</a></span><span class="op">(</span><span class="va">signatures</span><span class="op">[</span>, <span class="st">"IFNG"</span>, drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span>, topK <span class="op">=</span> <span class="fl">10</span>, direction <span class="op">=</span> <span class="st">"both"</span><span class="op">)</span></span>
+<span><span class="va">topGenes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>gene <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unlist.html" class="external-link">unlist</a></span><span class="op">(</span><span class="va">topSets</span><span class="op">)</span>, weight <span class="op">=</span> <span class="va">weights</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/unlist.html" class="external-link">unlist</a></span><span class="op">(</span><span class="va">topSets</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>weight <span class="op">=</span> <span class="va">weights</span><span class="op">)</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">weight</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_histogram.html" class="external-link">geom_histogram</a></span><span class="op">(</span>bins <span class="op">=</span> <span class="fl">100</span><span class="op">)</span> <span class="op">+</span></span>
-<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"IFNG signature weights"</span>, x <span class="op">=</span> <span class="st">"Weight"</span>, y <span class="op">=</span> <span class="st">"Genes"</span><span class="op">)</span></span></code></pre></div>
+<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">topGenes</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">weight</span>, y <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>, colour <span class="op">=</span> <span class="st">"firebrick"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu">ggrepel</span><span class="fu">::</span><span class="fu"><a href="https://ggrepel.slowkow.com/reference/geom_text_repel.html" class="external-link">geom_text_repel</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">topGenes</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">weight</span>, y <span class="op">=</span> <span class="fl">1</span>, label <span class="op">=</span> <span class="va">gene</span><span class="op">)</span>,</span>
+<span>                             size <span class="op">=</span> <span class="fl">3</span>, nudge_y <span class="op">=</span> <span class="fl">1</span>, direction <span class="op">=</span> <span class="st">"both"</span>,</span>
+<span>                             max.overlaps <span class="op">=</span> <span class="cn">Inf</span>, min.segment.length <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_continuous.html" class="external-link">scale_y_continuous</a></span><span class="op">(</span>transform <span class="op">=</span> <span class="st">"log1p"</span>, breaks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">10</span>, <span class="fl">100</span>, <span class="fl">1000</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"IFNG signature weights"</span>, x <span class="op">=</span> <span class="st">"Weight"</span>, y <span class="op">=</span> <span class="st">"Genes (log scale)"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="pertsig-tutorial_files/figure-html/unnamed-chunk-5-1.png" class="r-plt" alt="" width="672"></p>
-<p>The top 50 genes of the IFNG signature:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/getGeneSets.html">getGeneSets</a></span><span class="op">(</span><span class="va">signatures</span>, topK <span class="op">=</span> <span class="fl">50</span><span class="op">)</span><span class="op">[[</span><span class="st">"IFNG"</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="co">#&gt;  [1] "IRF1"     "GBP1"     "WARS1"    "APOL6"    "GBP4"     "CD74"    </span></span>
-<span><span class="co">#&gt;  [7] "SOCS3"    "TAP1"     "PLAAT4"   "STAT1"    "IDO1"     "C1S"     </span></span>
-<span><span class="co">#&gt; [13] "CYP24A1"  "GBP5"     "UBE2L6"   "C1R"      "GBP3"     "SBNO2"   </span></span>
-<span><span class="co">#&gt; [19] "PARP14"   "PLGRKT"   "TAP2"     "PSMB10"   "HLA-E"    "APOL3"   </span></span>
-<span><span class="co">#&gt; [25] "CD274"    "PSMB8"    "SERPINB1" "CXCL9"    "GBP2"     "HAPLN3"  </span></span>
-<span><span class="co">#&gt; [31] "APOL2"    "CSF1"     "IL32"     "ETV5"     "LAP3"     "ICAM1"   </span></span>
-<span><span class="co">#&gt; [37] "SERPING1" "LGALS3BP" "PSAT1"    "IL18BP"   "TGM2"     "SECTM1"  </span></span>
-<span><span class="co">#&gt; [43] "PCK2"     "PIM1"     "TAPBP"    "PSMB9"    "TWF1"     "PSME2"   </span></span>
-<span><span class="co">#&gt; [49] "VAMP5"    "NLRC5"</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="example-dataset">Example dataset<a class="anchor" aria-label="anchor" href="#example-dataset"></a>
@@ -135,16 +139,30 @@ is a microarray time course of the HSG cell line, untreated or treated
 with IFN-alpha or IFN-gamma, in triplicate. We use the 4-hour samples
 and make two DE comparisons: IFN-alpha vs untreated and IFN-gamma vs
 untreated.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gse</span> <span class="op">&lt;-</span> <span class="fu"><a href="http://seandavi.github.io/GEOquery/reference/getGEO.html" class="external-link">getGEO</a></span><span class="op">(</span><span class="st">"GSE41291"</span>, AnnotGPL <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="va">gse</span><span class="op">$</span><span class="va">condition</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">sub</a></span><span class="op">(</span><span class="st">"^HSG (\\S+) .*$"</span>, <span class="st">"\\1"</span>, <span class="va">gse</span><span class="op">$</span><span class="va">title</span><span class="op">)</span></span>
 <span><span class="va">gse</span><span class="op">$</span><span class="va">time</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">sub</a></span><span class="op">(</span><span class="st">"^HSG \\S+ (\\S+) rep\\d+$"</span>, <span class="st">"\\1"</span>, <span class="va">gse</span><span class="op">$</span><span class="va">title</span><span class="op">)</span></span>
-<span></span>
 <span><span class="va">gse4hr</span> <span class="op">&lt;-</span> <span class="va">gse</span><span class="op">[</span>, <span class="va">gse</span><span class="op">$</span><span class="va">time</span> <span class="op">==</span> <span class="st">"4hr"</span><span class="op">]</span></span>
+<span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">gse4hr</span><span class="op">$</span><span class="va">condition</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;  IFNalpha  IFNgamma untreated </span></span>
 <span><span class="co">#&gt;         3         3         3</span></span></code></pre></div>
+<p>fgsea needs one statistic per gene, so before fitting we drop probes
+without a unique gene symbol, keep the most highly expressed probe of
+each gene, and keep the 12,000 most highly expressed genes:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">symbols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/Biobase/man/featureData.html" class="external-link">fData</a></span><span class="op">(</span><span class="va">gse4hr</span><span class="op">)</span><span class="op">$</span><span class="va">`Gene symbol`</span></span>
+<span><span class="va">gse4hr</span> <span class="op">&lt;-</span> <span class="va">gse4hr</span><span class="op">[</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">symbols</span><span class="op">)</span> <span class="op">&amp;</span> <span class="va">symbols</span> <span class="op">!=</span> <span class="st">""</span> <span class="op">&amp;</span> <span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"///"</span>, <span class="va">symbols</span>, fixed <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, <span class="op">]</span></span>
+<span><span class="va">gse4hr</span> <span class="op">&lt;-</span> <span class="va">gse4hr</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">rowMeans</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/Biobase/man/exprs.html" class="external-link">exprs</a></span><span class="op">(</span><span class="va">gse4hr</span><span class="op">)</span><span class="op">)</span>, decreasing <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, <span class="op">]</span></span>
+<span><span class="va">gse4hr</span> <span class="op">&lt;-</span> <span class="va">gse4hr</span><span class="op">[</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/duplicated.html" class="external-link">duplicated</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/Biobase/man/featureData.html" class="external-link">fData</a></span><span class="op">(</span><span class="va">gse4hr</span><span class="op">)</span><span class="op">$</span><span class="va">`Gene symbol`</span><span class="op">)</span>, <span class="op">]</span></span>
+<span></span>
+<span><span class="va">gse4hr</span> <span class="op">&lt;-</span> <span class="va">gse4hr</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="fl">12000</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">gse4hr</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>, <span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/Biobase/man/featureNames.html" class="external-link">featureNames</a></span><span class="op">(</span><span class="va">gse4hr</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/Biobase/man/featureData.html" class="external-link">fData</a></span><span class="op">(</span><span class="va">gse4hr</span><span class="op">)</span><span class="op">$</span><span class="va">`Gene symbol`</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">gse4hr</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Features  Samples </span></span>
+<span><span class="co">#&gt;    12000        9</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="differential-expression">Differential expression<a class="anchor" aria-label="anchor" href="#differential-expression"></a>
@@ -159,23 +177,14 @@ untreated.</p>
 <span>                           levels <span class="op">=</span> <span class="va">design</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/limma/man/lmFit.html" class="external-link">lmFit</a></span><span class="op">(</span><span class="va">gse4hr</span>, <span class="va">design</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/limma/man/ebayes.html" class="external-link">eBayes</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/limma/man/contrasts.fit.html" class="external-link">contrasts.fit</a></span><span class="op">(</span><span class="va">fit</span>, <span class="va">contrasts</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>fgsea needs one statistic per gene. We use the limma t-statistic,
-drop probes without a unique gene symbol and keep the most highly
-expressed probe of each gene:</p>
+<p>We rank genes by the limma t-statistic. <code>fit$t</code> has one
+column per contrast, with genes as row names:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">getRanks</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">fit</span>, <span class="va">contrast</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">de</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/as.data.table.html" class="external-link">as.data.table</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/limma/man/toptable.html" class="external-link">topTable</a></span><span class="op">(</span><span class="va">fit</span>, coef <span class="op">=</span> <span class="va">contrast</span>, number <span class="op">=</span> <span class="cn">Inf</span><span class="op">)</span><span class="op">)</span></span>
-<span>    <span class="va">de</span> <span class="op">&lt;-</span> <span class="va">de</span><span class="op">[</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">Gene.symbol</span><span class="op">)</span> <span class="op">&amp;</span> <span class="va">Gene.symbol</span> <span class="op">!=</span> <span class="st">""</span> <span class="op">&amp;</span></span>
-<span>                 <span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"///"</span>, <span class="va">Gene.symbol</span>, fixed <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">]</span></span>
-<span>    <span class="va">de</span> <span class="op">&lt;-</span> <span class="va">de</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="op">-</span><span class="va">AveExpr</span><span class="op">)</span><span class="op">]</span><span class="op">[</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/duplicated.html" class="external-link">duplicated</a></span><span class="op">(</span><span class="va">Gene.symbol</span><span class="op">)</span><span class="op">]</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">de</span><span class="op">$</span><span class="va">t</span>, <span class="va">de</span><span class="op">$</span><span class="va">Gene.symbol</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="va">ranks</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>IFNalpha <span class="op">=</span> <span class="fu">getRanks</span><span class="op">(</span><span class="va">fit</span>, <span class="st">"IFNalpha"</span><span class="op">)</span>,</span>
-<span>              IFNgamma <span class="op">=</span> <span class="fu">getRanks</span><span class="op">(</span><span class="va">fit</span>, <span class="st">"IFNgamma"</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">ranks</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>IFNalpha <span class="op">=</span> <span class="va">fit</span><span class="op">$</span><span class="va">t</span><span class="op">[</span>, <span class="st">"IFNalpha"</span><span class="op">]</span>,</span>
+<span>              IFNgamma <span class="op">=</span> <span class="va">fit</span><span class="op">$</span><span class="va">t</span><span class="op">[</span>, <span class="st">"IFNgamma"</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/lengths.html" class="external-link">lengths</a></span><span class="op">(</span><span class="va">ranks</span><span class="op">)</span></span>
 <span><span class="co">#&gt; IFNalpha IFNgamma </span></span>
-<span><span class="co">#&gt;    19593    19593</span></span></code></pre></div>
+<span><span class="co">#&gt;    12000    12000</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="making-gene-sets">Making gene sets<a class="anchor" aria-label="anchor" href="#making-gene-sets"></a>
@@ -216,28 +225,28 @@ perturbation; a negative NES means it goes the opposite way.</p>
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">fgseaRes</span><span class="op">$</span><span class="va">IFNalpha</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">pval</span><span class="op">)</span><span class="op">]</span>, <span class="fl">10</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                             pathway         pval         padj   log2err</span></span>
 <span><span class="co">#&gt;                              &lt;char&gt;        &lt;num&gt;        &lt;num&gt;     &lt;num&gt;</span></span>
-<span><span class="co">#&gt;  1:                GENE_FAMILY_IFNA 3.850920e-45 6.354017e-43 1.7506503</span></span>
-<span><span class="co">#&gt;  2:                            IFNG 1.116002e-27 9.207015e-26 1.3651796</span></span>
-<span><span class="co">#&gt;  3:                             IL6 5.782674e-22 3.180471e-20 1.2125446</span></span>
-<span><span class="co">#&gt;  4:                      SARS_COV_2 6.863142e-20 2.831046e-18 1.1512205</span></span>
-<span><span class="co">#&gt;  5:                          STING1 6.556916e-17 2.163782e-15 1.0574636</span></span>
-<span><span class="co">#&gt;  6:                      ZIKA_VIRUS 8.418028e-16 2.314958e-14 1.0276699</span></span>
-<span><span class="co">#&gt;  7:                            IL22 1.247337e-15 2.940151e-14 1.0175448</span></span>
-<span><span class="co">#&gt;  8:                            MITF 5.509383e-14 1.010054e-12 0.9653278</span></span>
-<span><span class="co">#&gt;  9: POLYINOSINIC_POLYCYTIDYLIC_ACID 5.509383e-14 1.010054e-12 0.9653278</span></span>
-<span><span class="co">#&gt; 10:     HEPATITIS_C_VIRUS_INFECTION 1.338418e-12 2.208390e-11 0.9101197</span></span>
+<span><span class="co">#&gt;  1:                GENE_FAMILY_IFNA 2.557006e-46 4.219060e-44 1.7741500</span></span>
+<span><span class="co">#&gt;  2:                            IFNG 1.082522e-27 8.930805e-26 1.3651796</span></span>
+<span><span class="co">#&gt;  3:                             IL6 1.247586e-23 6.861720e-22 1.2627399</span></span>
+<span><span class="co">#&gt;  4:                      SARS_COV_2 2.380386e-20 9.819091e-19 1.1690700</span></span>
+<span><span class="co">#&gt;  5:                          STING1 1.926395e-18 6.357104e-17 1.1053366</span></span>
+<span><span class="co">#&gt;  6:                            IL22 1.779818e-17 4.894500e-16 1.0768682</span></span>
+<span><span class="co">#&gt;  7:                            MITF 1.233409e-15 2.907322e-14 1.0175448</span></span>
+<span><span class="co">#&gt;  8:                      ZIKA_VIRUS 1.896341e-14 3.911204e-13 0.9759947</span></span>
+<span><span class="co">#&gt;  9: POLYINOSINIC_POLYCYTIDYLIC_ACID 2.754136e-13 5.049250e-12 0.9325952</span></span>
+<span><span class="co">#&gt; 10:                            IL21 5.638781e-13 9.303989e-12 0.9214260</span></span>
 <span><span class="co">#&gt;            ES      NES  size                                   leadingEdge</span></span>
 <span><span class="co">#&gt;         &lt;num&gt;    &lt;num&gt; &lt;int&gt;                                        &lt;list&gt;</span></span>
-<span><span class="co">#&gt;  1: 0.9086312 3.650279   100    IRF9,IFIT3,IFIT1,IFIT2,HELZ2,IFI16,...[51]</span></span>
-<span><span class="co">#&gt;  2: 0.8376970 3.365313   100 IRF9,SERPINB1,TGM2,STAT1,PARP9,UBE2L6,...[46]</span></span>
-<span><span class="co">#&gt;  3: 0.8010650 3.218149   100 IRF9,IFI16,SERPINB1,TGM2,PARP9,PLSCR1,...[40]</span></span>
-<span><span class="co">#&gt;  4: 0.7806835 3.136270   100   IFIT3,IFIT1,IFIT2,HELZ2,IFI16,ISG15,...[35]</span></span>
-<span><span class="co">#&gt;  5: 0.7491926 3.009760   100     IFIT3,IFIT2,OASL,IFI44,ISG15,TGM2,...[27]</span></span>
-<span><span class="co">#&gt;  6: 0.7366120 2.959220   100    IFIT3,IFIT1,IFIT2,HELZ2,OASL,ISG15,...[23]</span></span>
-<span><span class="co">#&gt;  7: 0.7347480 2.951731   100 HELZ2,SERPINB1,IRF7,TGM2,SOCS2,SECTM1,...[46]</span></span>
-<span><span class="co">#&gt;  8: 0.7134086 2.866004   100    IFIT3,IFIT1,HELZ2,TRIM21,OAS2,IFI6,...[20]</span></span>
-<span><span class="co">#&gt;  9: 0.7133904 2.865931   100    IFIT3,IFIT1,IFIT2,HELZ2,OASL,IFI44,...[24]</span></span>
-<span><span class="co">#&gt; 10: 0.6936794 2.786745   100    OASL,IFI44,ISG15,IFI44L,STAT1,IFI6,...[17]</span></span></code></pre></div>
+<span><span class="co">#&gt;  1: 0.9086398 3.630088   100    IRF9,IFIT3,IFIT1,IFIT2,HELZ2,IFI16,...[53]</span></span>
+<span><span class="co">#&gt;  2: 0.8370611 3.344125   100 IRF9,SERPINB1,STAT1,UBE2L6,PARP9,TGM2,...[51]</span></span>
+<span><span class="co">#&gt;  3: 0.8131379 3.248550   100 IRF9,IFI16,SERPINB1,PARP9,TGM2,PLSCR1,...[42]</span></span>
+<span><span class="co">#&gt;  4: 0.7888875 3.151668   100   IFIT3,IFIT1,IFIT2,HELZ2,IFI16,ISG15,...[39]</span></span>
+<span><span class="co">#&gt;  5: 0.7721917 3.084967   100     IFIT3,IFIT2,ISG15,IFI44,OASL,OAS2,...[31]</span></span>
+<span><span class="co">#&gt;  6: 0.7633932 3.049816   100  HELZ2,IFI16,IRF7,SERPINB1,TGM2,SOCS2,...[49]</span></span>
+<span><span class="co">#&gt;  7: 0.7439658 2.972202   100   IFIT3,IFIT1,HELZ2,STAT1,TRIM21,IFI6,...[21]</span></span>
+<span><span class="co">#&gt;  8: 0.7296493 2.915007   100    IFIT3,IFIT1,IFIT2,HELZ2,ISG15,OASL,...[24]</span></span>
+<span><span class="co">#&gt;  9: 0.7149538 2.856297   100   IFIT3,IFIT1,IFIT2,HELZ2,ISG15,IFI44,...[28]</span></span>
+<span><span class="co">#&gt; 10: 0.7110759 2.840805   100 IRF9,IFI16,SERPINB1,PARP9,IRF1,CXCL10,...[30]</span></span></code></pre></div>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">plotTopSignatures</span><span class="op">(</span><span class="va">fgseaRes</span><span class="op">$</span><span class="va">IFNalpha</span>, <span class="va">ranks</span><span class="op">$</span><span class="va">IFNalpha</span><span class="op">)</span></span></code></pre></div>
 <p><img src="pertsig-tutorial_files/figure-html/unnamed-chunk-14-1.png" class="r-plt" alt="" width="672"></p>
@@ -251,30 +260,30 @@ perturbation; a negative NES means it goes the opposite way.</p>
 </h3>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">fgseaRes</span><span class="op">$</span><span class="va">IFNgamma</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">pval</span><span class="op">)</span><span class="op">]</span>, <span class="fl">10</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                    pathway         pval         padj   log2err        ES</span></span>
-<span><span class="co">#&gt;                     &lt;char&gt;        &lt;num&gt;        &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span></span>
-<span><span class="co">#&gt;  1:                   IFNG 3.068876e-38 5.063645e-36 1.6088796 0.8661303</span></span>
-<span><span class="co">#&gt;  2:       GENE_FAMILY_IFNA 1.811776e-22 1.494715e-20 1.2295041 0.7750994</span></span>
-<span><span class="co">#&gt;  3:                    IL6 1.481316e-21 8.147238e-20 1.2039752 0.7686371</span></span>
-<span><span class="co">#&gt;  4:                   IL21 3.618890e-14 1.492792e-12 0.9653278 0.6893531</span></span>
-<span><span class="co">#&gt;  5:                    IL3 2.093198e-10 6.907553e-09 0.8266573 0.6304140</span></span>
-<span><span class="co">#&gt;  6:                    TNF 3.715776e-10 1.021838e-08 0.8140358 0.6262948</span></span>
-<span><span class="co">#&gt;  7:                   IL22 3.158096e-09 7.444082e-08 0.7749390 0.6056923</span></span>
-<span><span class="co">#&gt;  8:                    EGF 1.112219e-07 2.293952e-06 0.7049757 0.5699742</span></span>
-<span><span class="co">#&gt;  9:             SARS_COV_2 3.957977e-07 7.256291e-06 0.6749629 0.5545557</span></span>
-<span><span class="co">#&gt; 10: ANTIRETROVIRAL_THERAPY 5.353384e-07 8.833083e-06 0.6594444 0.5505014</span></span>
+<span><span class="co">#&gt;                         pathway         pval         padj   log2err        ES</span></span>
+<span><span class="co">#&gt;                          &lt;char&gt;        &lt;num&gt;        &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span></span>
+<span><span class="co">#&gt;  1:                        IFNG 5.391018e-39 8.895180e-37 1.6280717 0.8602595</span></span>
+<span><span class="co">#&gt;  2:            GENE_FAMILY_IFNA 1.591009e-25 1.312582e-23 1.3110148 0.7876137</span></span>
+<span><span class="co">#&gt;  3:                         IL6 4.887391e-23 2.688065e-21 1.2462328 0.7673964</span></span>
+<span><span class="co">#&gt;  4:                        IL21 1.932510e-16 7.971604e-15 1.0476265 0.6982046</span></span>
+<span><span class="co">#&gt;  5:                         TNF 1.144855e-11 3.778022e-10 0.8753251 0.6279393</span></span>
+<span><span class="co">#&gt;  6:                         IL3 2.147943e-11 5.906843e-10 0.8634154 0.6238071</span></span>
+<span><span class="co">#&gt;  7:                        IL22 3.404233e-10 8.024263e-09 0.8140358 0.6031722</span></span>
+<span><span class="co">#&gt;  8:                  SARS_COV_2 5.038282e-09 1.039146e-07 0.7614608 0.5736667</span></span>
+<span><span class="co">#&gt;  9: HEPATITIS_C_VIRUS_INFECTION 3.476956e-08 6.374419e-07 0.7195128 0.5532299</span></span>
+<span><span class="co">#&gt; 10:                         EGF 1.350537e-07 2.136505e-06 0.6901325 0.5373285</span></span>
 <span><span class="co">#&gt;          NES  size                                   leadingEdge</span></span>
 <span><span class="co">#&gt;        &lt;num&gt; &lt;int&gt;                                        &lt;list&gt;</span></span>
-<span><span class="co">#&gt;  1: 3.605913   100    IRF9,CXCL10,IRF1,TGM2,IL18BP,STAT1,...[54]</span></span>
-<span><span class="co">#&gt;  2: 3.226929   100   IRF9,HEG1,STAT1,TRIM21,PARP9,UBE2L6,...[42]</span></span>
-<span><span class="co">#&gt;  3: 3.200025   100      IRF9,TGM2,PARP9,GBP2,SECTM1,CCL2,...[38]</span></span>
-<span><span class="co">#&gt;  4: 2.869946   100      IRF9,CXCL10,IRF1,HEG1,PARP9,GBP2,...[31]</span></span>
-<span><span class="co">#&gt;  5: 2.624568   100     IRF9,PARP9,CCL2,PLSCR1,SOCS1,CISH,...[33]</span></span>
-<span><span class="co">#&gt;  6: 2.607419   100        UBD,CXCL10,IRF1,GBP1,CCL2,TAP1,...[21]</span></span>
-<span><span class="co">#&gt;  7: 2.521646   100 TGM2,SECTM1,HELZ2,CISH,SBNO2,SERPINB1,...[33]</span></span>
-<span><span class="co">#&gt;  8: 2.372943   100   IRF9,IRF1,TRIB1,CXCL2,LDLR,TNFRSF1A,...[25]</span></span>
-<span><span class="co">#&gt;  9: 2.308752   100   IFIT3,IFI16,HELZ2,IFIT2,CXCL2,SP110,...[34]</span></span>
-<span><span class="co">#&gt; 10: 2.291873   100   PARP9,TAP1,HLA-E,HAPLN3,SOCS1,BATF2,...[22]</span></span></code></pre></div>
+<span><span class="co">#&gt;  1: 3.780762   100  IRF9,CXCL10,IRF1,STAT1,IL18BP,UBE2L6,...[60]</span></span>
+<span><span class="co">#&gt;  2: 3.461490   100   IRF9,IRF1,STAT1,UBE2L6,TRIM21,PARP9,...[44]</span></span>
+<span><span class="co">#&gt;  3: 3.372637   100      IRF9,TGM2,PARP9,CCL2,GBP2,SECTM1,...[43]</span></span>
+<span><span class="co">#&gt;  4: 3.068545   100      IRF9,CXCL10,IRF1,PARP9,HEG1,GBP2,...[35]</span></span>
+<span><span class="co">#&gt;  5: 2.759736   100        UBD,CXCL10,IRF1,GBP1,CCL2,TAP1,...[24]</span></span>
+<span><span class="co">#&gt;  6: 2.741575   100     IRF9,PARP9,CCL2,PLSCR1,SOCS1,CISH,...[37]</span></span>
+<span><span class="co">#&gt;  7: 2.650887   100 TGM2,SECTM1,IFI16,HELZ2,CISH,TNFRSF1A,...[34]</span></span>
+<span><span class="co">#&gt;  8: 2.521213   100   IFIT3,IFI16,HELZ2,IFIT2,CXCL2,SP110,...[40]</span></span>
+<span><span class="co">#&gt;  9: 2.431395   100 CXCL10,STAT1,HLA-E,CXCL9,PLSCR1,ISG15,...[27]</span></span>
+<span><span class="co">#&gt; 10: 2.361510   100   IRF9,IRF1,CXCL2,TRIB1,LDLR,TNFRSF1A,...[28]</span></span></code></pre></div>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">plotTopSignatures</span><span class="op">(</span><span class="va">fgseaRes</span><span class="op">$</span><span class="va">IFNgamma</span>, <span class="va">ranks</span><span class="op">$</span><span class="va">IFNgamma</span><span class="op">)</span></span></code></pre></div>
 <p><img src="pertsig-tutorial_files/figure-html/unnamed-chunk-17-1.png" class="r-plt" alt="" width="672"></p>
@@ -337,42 +346,42 @@ IFNG signature:</p>
 <span><span class="co">#&gt;  [1] SummarizedExperiment_1.42.0 fastmatch_1.1-8            </span></span>
 <span><span class="co">#&gt;  [3] gtable_0.3.6                httr2_1.3.0                </span></span>
 <span><span class="co">#&gt;  [5] xfun_0.62                   bslib_0.12.0               </span></span>
-<span><span class="co">#&gt;  [7] lattice_0.23-1              tzdb_0.5.0                 </span></span>
-<span><span class="co">#&gt;  [9] vctrs_0.7.3                 tools_4.6.2                </span></span>
-<span><span class="co">#&gt; [11] curl_8.1.0                  stats4_4.6.2               </span></span>
-<span><span class="co">#&gt; [13] parallel_4.6.2              tibble_3.3.1               </span></span>
-<span><span class="co">#&gt; [15] R.oo_1.27.1                 pkgconfig_2.0.3            </span></span>
-<span><span class="co">#&gt; [17] Matrix_1.7-6                rentrez_1.2.4              </span></span>
-<span><span class="co">#&gt; [19] RColorBrewer_1.1-3          S7_0.2.2                   </span></span>
-<span><span class="co">#&gt; [21] desc_1.4.3                  S4Vectors_0.50.3           </span></span>
-<span><span class="co">#&gt; [23] lifecycle_1.0.5             compiler_4.6.2             </span></span>
-<span><span class="co">#&gt; [25] farver_2.1.2                textshaping_1.0.5          </span></span>
-<span><span class="co">#&gt; [27] statmod_1.5.2               Seqinfo_1.2.0              </span></span>
-<span><span class="co">#&gt; [29] codetools_0.2-20            htmltools_0.5.9            </span></span>
-<span><span class="co">#&gt; [31] sass_0.4.10                 yaml_2.3.12                </span></span>
-<span><span class="co">#&gt; [33] tidyr_1.3.2                 pillar_1.11.1              </span></span>
-<span><span class="co">#&gt; [35] pkgdown_2.2.1               jquerylib_0.1.4            </span></span>
-<span><span class="co">#&gt; [37] R.utils_2.13.0              BiocParallel_1.46.0        </span></span>
-<span><span class="co">#&gt; [39] cachem_1.1.0                DelayedArray_0.38.2        </span></span>
-<span><span class="co">#&gt; [41] abind_1.4-8                 tidyselect_1.2.1           </span></span>
-<span><span class="co">#&gt; [43] digest_0.6.39               purrr_1.2.2                </span></span>
-<span><span class="co">#&gt; [45] dplyr_1.2.1                 labeling_0.4.3             </span></span>
-<span><span class="co">#&gt; [47] cowplot_1.2.0               fastmap_1.2.0              </span></span>
-<span><span class="co">#&gt; [49] grid_4.6.2                  cli_3.6.6                  </span></span>
-<span><span class="co">#&gt; [51] SparseArray_1.12.3          magrittr_2.0.5             </span></span>
-<span><span class="co">#&gt; [53] S4Arrays_1.12.1             XML_3.99-0.25              </span></span>
-<span><span class="co">#&gt; [55] withr_3.0.3                 readr_2.2.0                </span></span>
-<span><span class="co">#&gt; [57] scales_1.4.0                rmarkdown_2.32             </span></span>
-<span><span class="co">#&gt; [59] XVector_0.52.0              matrixStats_1.5.0          </span></span>
-<span><span class="co">#&gt; [61] otel_0.2.0                  R.methodsS3_1.8.2          </span></span>
-<span><span class="co">#&gt; [63] hms_1.1.4                   ragg_1.5.2                 </span></span>
-<span><span class="co">#&gt; [65] evaluate_1.0.5              knitr_1.52                 </span></span>
-<span><span class="co">#&gt; [67] GenomicRanges_1.64.0        IRanges_2.46.0             </span></span>
-<span><span class="co">#&gt; [69] rlang_1.3.0                 Rcpp_1.1.2                 </span></span>
-<span><span class="co">#&gt; [71] glue_1.8.1                  xml2_1.6.0                 </span></span>
-<span><span class="co">#&gt; [73] jsonlite_2.0.0              R6_2.6.1                   </span></span>
-<span><span class="co">#&gt; [75] MatrixGenerics_1.24.0       systemfonts_1.3.2          </span></span>
-<span><span class="co">#&gt; [77] fs_2.1.0</span></span></code></pre></div>
+<span><span class="co">#&gt;  [7] ggrepel_0.9.8               lattice_0.23-1             </span></span>
+<span><span class="co">#&gt;  [9] tzdb_0.5.0                  vctrs_0.7.3                </span></span>
+<span><span class="co">#&gt; [11] tools_4.6.2                 curl_8.1.0                 </span></span>
+<span><span class="co">#&gt; [13] stats4_4.6.2                parallel_4.6.2             </span></span>
+<span><span class="co">#&gt; [15] tibble_3.3.1                R.oo_1.27.1                </span></span>
+<span><span class="co">#&gt; [17] pkgconfig_2.0.3             Matrix_1.7-6               </span></span>
+<span><span class="co">#&gt; [19] rentrez_1.2.4               RColorBrewer_1.1-3         </span></span>
+<span><span class="co">#&gt; [21] S7_0.2.2                    desc_1.4.3                 </span></span>
+<span><span class="co">#&gt; [23] S4Vectors_0.50.3            lifecycle_1.0.5            </span></span>
+<span><span class="co">#&gt; [25] compiler_4.6.2              farver_2.1.2               </span></span>
+<span><span class="co">#&gt; [27] textshaping_1.0.5           statmod_1.5.2              </span></span>
+<span><span class="co">#&gt; [29] Seqinfo_1.2.0               codetools_0.2-20           </span></span>
+<span><span class="co">#&gt; [31] htmltools_0.5.9             sass_0.4.10                </span></span>
+<span><span class="co">#&gt; [33] yaml_2.3.12                 tidyr_1.3.2                </span></span>
+<span><span class="co">#&gt; [35] pillar_1.11.1               pkgdown_2.2.1              </span></span>
+<span><span class="co">#&gt; [37] jquerylib_0.1.4             R.utils_2.13.0             </span></span>
+<span><span class="co">#&gt; [39] BiocParallel_1.46.0         cachem_1.1.0               </span></span>
+<span><span class="co">#&gt; [41] DelayedArray_0.38.2         abind_1.4-8                </span></span>
+<span><span class="co">#&gt; [43] tidyselect_1.2.1            digest_0.6.39              </span></span>
+<span><span class="co">#&gt; [45] purrr_1.2.2                 dplyr_1.2.1                </span></span>
+<span><span class="co">#&gt; [47] labeling_0.4.3              cowplot_1.2.0              </span></span>
+<span><span class="co">#&gt; [49] fastmap_1.2.0               grid_4.6.2                 </span></span>
+<span><span class="co">#&gt; [51] cli_3.6.6                   SparseArray_1.12.3         </span></span>
+<span><span class="co">#&gt; [53] magrittr_2.0.5              S4Arrays_1.12.1            </span></span>
+<span><span class="co">#&gt; [55] XML_3.99-0.25               withr_3.0.3                </span></span>
+<span><span class="co">#&gt; [57] readr_2.2.0                 scales_1.4.0               </span></span>
+<span><span class="co">#&gt; [59] rmarkdown_2.32              XVector_0.52.0             </span></span>
+<span><span class="co">#&gt; [61] matrixStats_1.5.0           otel_0.2.0                 </span></span>
+<span><span class="co">#&gt; [63] R.methodsS3_1.8.2           hms_1.1.4                  </span></span>
+<span><span class="co">#&gt; [65] ragg_1.5.2                  evaluate_1.0.5             </span></span>
+<span><span class="co">#&gt; [67] knitr_1.52                  GenomicRanges_1.64.0       </span></span>
+<span><span class="co">#&gt; [69] IRanges_2.46.0              rlang_1.3.0                </span></span>
+<span><span class="co">#&gt; [71] Rcpp_1.1.2                  glue_1.8.1                 </span></span>
+<span><span class="co">#&gt; [73] xml2_1.6.0                  jsonlite_2.0.0             </span></span>
+<span><span class="co">#&gt; [75] R6_2.6.1                    MatrixGenerics_1.24.0      </span></span>
+<span><span class="co">#&gt; [77] systemfonts_1.3.2           fs_2.1.0</span></span></code></pre></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

@@ -1,9 +1,9 @@
 # Load perturbation signatures
 
 Reads the perturbation signatures (per-gene logistic regression
-coefficients) for human or mouse. The CSV file is downloaded from
-<https://alserglab.wustl.edu/files/pertsig/> on the first call and read
-from the cache afterwards.
+coefficients) for human or mouse. The TSV file is downloaded from
+<https://zenodo.org/records/23986547/> on the first call and read from
+the cache afterwards.
 
 ## Usage
 

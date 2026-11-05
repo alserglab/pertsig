@@ -52,9 +52,41 @@
 </nav><div class="container template-home">
 <div class="row">
   <main id="main" class="col-md-9"><div class="section level1">
-<div class="page-header"><h1 id="pertsig">pertsig<a class="anchor" aria-label="anchor" href="#pertsig"></a>
+<div class="page-header"><h1 id="pertsig">Pertsig<a class="anchor" aria-label="anchor" href="#pertsig"></a>
 </h1></div>
-<p>Perturbation signatures from <a href="https://alserglab.wustl.edu/files/pertsig/" class="external-link uri">https://alserglab.wustl.edu/files/pertsig/</a> as gene sets for enrichment analysis with <a href="https://bioconductor.org/packages/fgsea/" class="external-link">fgsea</a>.</p>
+<p>PertSig – a data-driven collection of transcriptional perturbation signatures for human and mouse</p>
+<p>The <code>pertsig</code> R package loads the signatures and turns them into gene sets for enrichment analysis with <a href="https://bioconductor.org/packages/fgsea/" class="external-link">fgsea</a>.</p>
+<div class="section level2">
+<h2 id="data">Data<a class="anchor" aria-label="anchor" href="#data"></a>
+</h2>
+<p>The signatures are available on Zenodo: <strong><a href="https://zenodo.org/records/23986547" class="external-link uri">https://zenodo.org/records/23986547</a></strong></p>
+<table class="table">
+<thead><tr>
+<th>Species</th>
+<th align="right">Signatures</th>
+<th align="right">Genes</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Human (<code>hsa</code>)</td>
+<td align="right">165</td>
+<td align="right">9,733</td>
+</tr>
+<tr>
+<td>Mouse (<code>mmu</code>)</td>
+<td align="right">266</td>
+<td align="right">9,625</td>
+</tr>
+</tbody>
+</table>
+<p>You can get the data in two ways:</p>
+<ul>
+<li>
+<strong>Download the files</strong> from the Zenodo record and use them with any tool.</li>
+<li>
+<strong>Load them in R with this package.</strong> <code><a href="reference/loadSignatures.html">loadSignatures()</a></code> downloads the file on the first call and reads it from the local cache afterwards.</li>
+</ul>
+</div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
@@ -75,6 +107,11 @@
 <span><span class="va">geneSets</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/getGeneSets.html">getGeneSets</a></span><span class="op">(</span><span class="va">signatures</span>, topK <span class="op">=</span> <span class="fl">200</span>, universe <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">exampleRanks</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/fgsea/man/fgsea.html" class="external-link">fgsea</a></span><span class="op">(</span><span class="va">geneSets</span>, <span class="va">exampleRanks</span><span class="op">)</span></span></code></pre></div>
 <p>See the <a href="https://alserglab.github.io/pertsig/articles/pertsig-tutorial.html">tutorial</a> for a full example.</p>
+</div>
+<div class="section level2">
+<h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
+</h2>
+<p>Nugmanova, A., &amp; Sergushichev, A. (2026). PertSig—a data-driven collection of transcriptional perturbation signatures for human and mouse [Dataset]. Zenodo. <a href="https://doi.org/10.5281/zenodo.23986547" class="external-link uri">https://doi.org/10.5281/zenodo.23986547</a></p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">

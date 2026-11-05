@@ -21,6 +21,8 @@ remotes::install_github("alserglab/pertsig")
 library(pertsig)
 library(fgsea)
 library(GEOquery)
+#> Warning: replacing previous import 'S4Arrays::makeNindexFromArrayViewport' by
+#> 'DelayedArray::makeNindexFromArrayViewport' when loading 'SummarizedExperiment'
 library(limma)
 library(data.table)
 library(ggplot2)
@@ -51,34 +53,32 @@ head(colnames(signatures), 10)
 #> [10] "5_FLUOROURACIL"
 ```
 
-Each column is one perturbation. Weights are signed: positive weights
-mark genes that go up after the perturbation and negative weights mark
-genes that go down.
+Each column is one signature, that could include one or several
+perturbations (that were megered together because they couldn’t be
+reliably distinguished). Weights are signed: positive weights mark genes
+that go up after the perturbation and negative weights mark genes that
+go down. For gene-related signatures, the positive direction corresponds
+to up-regulated genes in the gene-activating perturbations (e.g.,
+overexpression) and down-regulated in the gene-inhibiting perturbations
+(e.g., gene knockout).
 
 ``` r
 
-ggplot(data.frame(weight = signatures[, "IFNG"]), aes(weight)) +
+weights <- signatures[, "IFNG"]
+topSets <- getGeneSets(signatures[, "IFNG", drop = FALSE], topK = 10, direction = "both")
+topGenes <- data.frame(gene = unlist(topSets), weight = weights[unlist(topSets)])
+
+ggplot(data.frame(weight = weights), aes(weight)) +
     geom_histogram(bins = 100) +
-    labs(title = "IFNG signature weights", x = "Weight", y = "Genes")
+    geom_point(data = topGenes, aes(x = weight, y = 1), colour = "firebrick") +
+    ggrepel::geom_text_repel(data = topGenes, aes(x = weight, y = 1, label = gene),
+                             size = 3, nudge_y = 1, direction = "both",
+                             max.overlaps = Inf, min.segment.length = 0) +
+    scale_y_continuous(transform = "log1p", breaks = c(0, 1, 10, 100, 1000)) +
+    labs(title = "IFNG signature weights", x = "Weight", y = "Genes (log scale)")
 ```
 
 ![](pertsig-tutorial_files/figure-html/unnamed-chunk-5-1.png)
-
-The top 50 genes of the IFNG signature:
-
-``` r
-
-getGeneSets(signatures, topK = 50)[["IFNG"]]
-#>  [1] "IRF1"     "GBP1"     "WARS1"    "APOL6"    "GBP4"     "CD74"    
-#>  [7] "SOCS3"    "TAP1"     "PLAAT4"   "STAT1"    "IDO1"     "C1S"     
-#> [13] "CYP24A1"  "GBP5"     "UBE2L6"   "C1R"      "GBP3"     "SBNO2"   
-#> [19] "PARP14"   "PLGRKT"   "TAP2"     "PSMB10"   "HLA-E"    "APOL3"   
-#> [25] "CD274"    "PSMB8"    "SERPINB1" "CXCL9"    "GBP2"     "HAPLN3"  
-#> [31] "APOL2"    "CSF1"     "IL32"     "ETV5"     "LAP3"     "ICAM1"   
-#> [37] "SERPING1" "LGALS3BP" "PSAT1"    "IL18BP"   "TGM2"     "SECTM1"  
-#> [43] "PCK2"     "PIM1"     "TAPBP"    "PSMB9"    "TWF1"     "PSME2"   
-#> [49] "VAMP5"    "NLRC5"
-```
 
 ## Example dataset
 
@@ -93,12 +93,30 @@ untreated.
 gse <- getGEO("GSE41291", AnnotGPL = TRUE)[[1]]
 gse$condition <- sub("^HSG (\\S+) .*$", "\\1", gse$title)
 gse$time <- sub("^HSG \\S+ (\\S+) rep\\d+$", "\\1", gse$title)
-
 gse4hr <- gse[, gse$time == "4hr"]
+
 table(gse4hr$condition)
 #> 
 #>  IFNalpha  IFNgamma untreated 
 #>         3         3         3
+```
+
+fgsea needs one statistic per gene, so before fitting we drop probes
+without a unique gene symbol, keep the most highly expressed probe of
+each gene, and keep the 12,000 most highly expressed genes:
+
+``` r
+
+symbols <- fData(gse4hr)$`Gene symbol`
+gse4hr <- gse4hr[!is.na(symbols) & symbols != "" & !grepl("///", symbols, fixed = TRUE), ]
+gse4hr <- gse4hr[order(rowMeans(exprs(gse4hr)), decreasing = TRUE), ]
+gse4hr <- gse4hr[!duplicated(fData(gse4hr)$`Gene symbol`), ]
+
+gse4hr <- gse4hr[seq_len(min(12000, nrow(gse4hr))), ]
+featureNames(gse4hr) <- fData(gse4hr)$`Gene symbol`
+dim(gse4hr)
+#> Features  Samples 
+#>    12000        9
 ```
 
 ## Differential expression
@@ -116,25 +134,16 @@ fit <- lmFit(gse4hr, design)
 fit <- eBayes(contrasts.fit(fit, contrasts))
 ```
 
-fgsea needs one statistic per gene. We use the limma t-statistic, drop
-probes without a unique gene symbol and keep the most highly expressed
-probe of each gene:
+We rank genes by the limma t-statistic. `fit$t` has one column per
+contrast, with genes as row names:
 
 ``` r
 
-getRanks <- function(fit, contrast) {
-    de <- as.data.table(topTable(fit, coef = contrast, number = Inf))
-    de <- de[!is.na(Gene.symbol) & Gene.symbol != "" &
-                 !grepl("///", Gene.symbol, fixed = TRUE)]
-    de <- de[order(-AveExpr)][!duplicated(Gene.symbol)]
-    setNames(de$t, de$Gene.symbol)
-}
-
-ranks <- list(IFNalpha = getRanks(fit, "IFNalpha"),
-              IFNgamma = getRanks(fit, "IFNgamma"))
+ranks <- list(IFNalpha = fit$t[, "IFNalpha"],
+              IFNgamma = fit$t[, "IFNgamma"])
 lengths(ranks)
 #> IFNalpha IFNgamma 
-#>    19593    19593
+#>    12000    12000
 ```
 
 ## Making gene sets
@@ -184,28 +193,28 @@ plotTopSignatures <- function(fgseaRes, stats) {
 head(fgseaRes$IFNalpha[order(pval)], 10)
 #>                             pathway         pval         padj   log2err
 #>                              <char>        <num>        <num>     <num>
-#>  1:                GENE_FAMILY_IFNA 3.850920e-45 6.354017e-43 1.7506503
-#>  2:                            IFNG 1.116002e-27 9.207015e-26 1.3651796
-#>  3:                             IL6 5.782674e-22 3.180471e-20 1.2125446
-#>  4:                      SARS_COV_2 6.863142e-20 2.831046e-18 1.1512205
-#>  5:                          STING1 6.556916e-17 2.163782e-15 1.0574636
-#>  6:                      ZIKA_VIRUS 8.418028e-16 2.314958e-14 1.0276699
-#>  7:                            IL22 1.247337e-15 2.940151e-14 1.0175448
-#>  8:                            MITF 5.509383e-14 1.010054e-12 0.9653278
-#>  9: POLYINOSINIC_POLYCYTIDYLIC_ACID 5.509383e-14 1.010054e-12 0.9653278
-#> 10:     HEPATITIS_C_VIRUS_INFECTION 1.338418e-12 2.208390e-11 0.9101197
+#>  1:                GENE_FAMILY_IFNA 2.557006e-46 4.219060e-44 1.7741500
+#>  2:                            IFNG 1.082522e-27 8.930805e-26 1.3651796
+#>  3:                             IL6 1.247586e-23 6.861720e-22 1.2627399
+#>  4:                      SARS_COV_2 2.380386e-20 9.819091e-19 1.1690700
+#>  5:                          STING1 1.926395e-18 6.357104e-17 1.1053366
+#>  6:                            IL22 1.779818e-17 4.894500e-16 1.0768682
+#>  7:                            MITF 1.233409e-15 2.907322e-14 1.0175448
+#>  8:                      ZIKA_VIRUS 1.896341e-14 3.911204e-13 0.9759947
+#>  9: POLYINOSINIC_POLYCYTIDYLIC_ACID 2.754136e-13 5.049250e-12 0.9325952
+#> 10:                            IL21 5.638781e-13 9.303989e-12 0.9214260
 #>            ES      NES  size                                   leadingEdge
 #>         <num>    <num> <int>                                        <list>
-#>  1: 0.9086312 3.650279   100    IRF9,IFIT3,IFIT1,IFIT2,HELZ2,IFI16,...[51]
-#>  2: 0.8376970 3.365313   100 IRF9,SERPINB1,TGM2,STAT1,PARP9,UBE2L6,...[46]
-#>  3: 0.8010650 3.218149   100 IRF9,IFI16,SERPINB1,TGM2,PARP9,PLSCR1,...[40]
-#>  4: 0.7806835 3.136270   100   IFIT3,IFIT1,IFIT2,HELZ2,IFI16,ISG15,...[35]
-#>  5: 0.7491926 3.009760   100     IFIT3,IFIT2,OASL,IFI44,ISG15,TGM2,...[27]
-#>  6: 0.7366120 2.959220   100    IFIT3,IFIT1,IFIT2,HELZ2,OASL,ISG15,...[23]
-#>  7: 0.7347480 2.951731   100 HELZ2,SERPINB1,IRF7,TGM2,SOCS2,SECTM1,...[46]
-#>  8: 0.7134086 2.866004   100    IFIT3,IFIT1,HELZ2,TRIM21,OAS2,IFI6,...[20]
-#>  9: 0.7133904 2.865931   100    IFIT3,IFIT1,IFIT2,HELZ2,OASL,IFI44,...[24]
-#> 10: 0.6936794 2.786745   100    OASL,IFI44,ISG15,IFI44L,STAT1,IFI6,...[17]
+#>  1: 0.9086398 3.630088   100    IRF9,IFIT3,IFIT1,IFIT2,HELZ2,IFI16,...[53]
+#>  2: 0.8370611 3.344125   100 IRF9,SERPINB1,STAT1,UBE2L6,PARP9,TGM2,...[51]
+#>  3: 0.8131379 3.248550   100 IRF9,IFI16,SERPINB1,PARP9,TGM2,PLSCR1,...[42]
+#>  4: 0.7888875 3.151668   100   IFIT3,IFIT1,IFIT2,HELZ2,IFI16,ISG15,...[39]
+#>  5: 0.7721917 3.084967   100     IFIT3,IFIT2,ISG15,IFI44,OASL,OAS2,...[31]
+#>  6: 0.7633932 3.049816   100  HELZ2,IFI16,IRF7,SERPINB1,TGM2,SOCS2,...[49]
+#>  7: 0.7439658 2.972202   100   IFIT3,IFIT1,HELZ2,STAT1,TRIM21,IFI6,...[21]
+#>  8: 0.7296493 2.915007   100    IFIT3,IFIT1,IFIT2,HELZ2,ISG15,OASL,...[24]
+#>  9: 0.7149538 2.856297   100   IFIT3,IFIT1,IFIT2,HELZ2,ISG15,IFI44,...[28]
+#> 10: 0.7110759 2.840805   100 IRF9,IFI16,SERPINB1,PARP9,IRF1,CXCL10,...[30]
 ```
 
 ``` r
@@ -228,30 +237,30 @@ plotEnrichment(geneSets[["GENE_FAMILY_IFNA"]], ranks$IFNalpha) +
 ``` r
 
 head(fgseaRes$IFNgamma[order(pval)], 10)
-#>                    pathway         pval         padj   log2err        ES
-#>                     <char>        <num>        <num>     <num>     <num>
-#>  1:                   IFNG 3.068876e-38 5.063645e-36 1.6088796 0.8661303
-#>  2:       GENE_FAMILY_IFNA 1.811776e-22 1.494715e-20 1.2295041 0.7750994
-#>  3:                    IL6 1.481316e-21 8.147238e-20 1.2039752 0.7686371
-#>  4:                   IL21 3.618890e-14 1.492792e-12 0.9653278 0.6893531
-#>  5:                    IL3 2.093198e-10 6.907553e-09 0.8266573 0.6304140
-#>  6:                    TNF 3.715776e-10 1.021838e-08 0.8140358 0.6262948
-#>  7:                   IL22 3.158096e-09 7.444082e-08 0.7749390 0.6056923
-#>  8:                    EGF 1.112219e-07 2.293952e-06 0.7049757 0.5699742
-#>  9:             SARS_COV_2 3.957977e-07 7.256291e-06 0.6749629 0.5545557
-#> 10: ANTIRETROVIRAL_THERAPY 5.353384e-07 8.833083e-06 0.6594444 0.5505014
+#>                         pathway         pval         padj   log2err        ES
+#>                          <char>        <num>        <num>     <num>     <num>
+#>  1:                        IFNG 5.391018e-39 8.895180e-37 1.6280717 0.8602595
+#>  2:            GENE_FAMILY_IFNA 1.591009e-25 1.312582e-23 1.3110148 0.7876137
+#>  3:                         IL6 4.887391e-23 2.688065e-21 1.2462328 0.7673964
+#>  4:                        IL21 1.932510e-16 7.971604e-15 1.0476265 0.6982046
+#>  5:                         TNF 1.144855e-11 3.778022e-10 0.8753251 0.6279393
+#>  6:                         IL3 2.147943e-11 5.906843e-10 0.8634154 0.6238071
+#>  7:                        IL22 3.404233e-10 8.024263e-09 0.8140358 0.6031722
+#>  8:                  SARS_COV_2 5.038282e-09 1.039146e-07 0.7614608 0.5736667
+#>  9: HEPATITIS_C_VIRUS_INFECTION 3.476956e-08 6.374419e-07 0.7195128 0.5532299
+#> 10:                         EGF 1.350537e-07 2.136505e-06 0.6901325 0.5373285
 #>          NES  size                                   leadingEdge
 #>        <num> <int>                                        <list>
-#>  1: 3.605913   100    IRF9,CXCL10,IRF1,TGM2,IL18BP,STAT1,...[54]
-#>  2: 3.226929   100   IRF9,HEG1,STAT1,TRIM21,PARP9,UBE2L6,...[42]
-#>  3: 3.200025   100      IRF9,TGM2,PARP9,GBP2,SECTM1,CCL2,...[38]
-#>  4: 2.869946   100      IRF9,CXCL10,IRF1,HEG1,PARP9,GBP2,...[31]
-#>  5: 2.624568   100     IRF9,PARP9,CCL2,PLSCR1,SOCS1,CISH,...[33]
-#>  6: 2.607419   100        UBD,CXCL10,IRF1,GBP1,CCL2,TAP1,...[21]
-#>  7: 2.521646   100 TGM2,SECTM1,HELZ2,CISH,SBNO2,SERPINB1,...[33]
-#>  8: 2.372943   100   IRF9,IRF1,TRIB1,CXCL2,LDLR,TNFRSF1A,...[25]
-#>  9: 2.308752   100   IFIT3,IFI16,HELZ2,IFIT2,CXCL2,SP110,...[34]
-#> 10: 2.291873   100   PARP9,TAP1,HLA-E,HAPLN3,SOCS1,BATF2,...[22]
+#>  1: 3.780762   100  IRF9,CXCL10,IRF1,STAT1,IL18BP,UBE2L6,...[60]
+#>  2: 3.461490   100   IRF9,IRF1,STAT1,UBE2L6,TRIM21,PARP9,...[44]
+#>  3: 3.372637   100      IRF9,TGM2,PARP9,CCL2,GBP2,SECTM1,...[43]
+#>  4: 3.068545   100      IRF9,CXCL10,IRF1,PARP9,HEG1,GBP2,...[35]
+#>  5: 2.759736   100        UBD,CXCL10,IRF1,GBP1,CCL2,TAP1,...[24]
+#>  6: 2.741575   100     IRF9,PARP9,CCL2,PLSCR1,SOCS1,CISH,...[37]
+#>  7: 2.650887   100 TGM2,SECTM1,IFI16,HELZ2,CISH,TNFRSF1A,...[34]
+#>  8: 2.521213   100   IFIT3,IFI16,HELZ2,IFIT2,CXCL2,SP110,...[40]
+#>  9: 2.431395   100 CXCL10,STAT1,HLA-E,CXCL9,PLSCR1,ISG15,...[27]
+#> 10: 2.361510   100   IRF9,IRF1,CXCL2,TRIB1,LDLR,TNFRSF1A,...[28]
 ```
 
 ``` r
@@ -324,40 +333,40 @@ sessionInfo()
 #>  [1] SummarizedExperiment_1.42.0 fastmatch_1.1-8            
 #>  [3] gtable_0.3.6                httr2_1.3.0                
 #>  [5] xfun_0.62                   bslib_0.12.0               
-#>  [7] lattice_0.23-1              tzdb_0.5.0                 
-#>  [9] vctrs_0.7.3                 tools_4.6.2                
-#> [11] curl_8.1.0                  stats4_4.6.2               
-#> [13] parallel_4.6.2              tibble_3.3.1               
-#> [15] R.oo_1.27.1                 pkgconfig_2.0.3            
-#> [17] Matrix_1.7-6                rentrez_1.2.4              
-#> [19] RColorBrewer_1.1-3          S7_0.2.2                   
-#> [21] desc_1.4.3                  S4Vectors_0.50.3           
-#> [23] lifecycle_1.0.5             compiler_4.6.2             
-#> [25] farver_2.1.2                textshaping_1.0.5          
-#> [27] statmod_1.5.2               Seqinfo_1.2.0              
-#> [29] codetools_0.2-20            htmltools_0.5.9            
-#> [31] sass_0.4.10                 yaml_2.3.12                
-#> [33] tidyr_1.3.2                 pillar_1.11.1              
-#> [35] pkgdown_2.2.1               jquerylib_0.1.4            
-#> [37] R.utils_2.13.0              BiocParallel_1.46.0        
-#> [39] cachem_1.1.0                DelayedArray_0.38.2        
-#> [41] abind_1.4-8                 tidyselect_1.2.1           
-#> [43] digest_0.6.39               purrr_1.2.2                
-#> [45] dplyr_1.2.1                 labeling_0.4.3             
-#> [47] cowplot_1.2.0               fastmap_1.2.0              
-#> [49] grid_4.6.2                  cli_3.6.6                  
-#> [51] SparseArray_1.12.3          magrittr_2.0.5             
-#> [53] S4Arrays_1.12.1             XML_3.99-0.25              
-#> [55] withr_3.0.3                 readr_2.2.0                
-#> [57] scales_1.4.0                rmarkdown_2.32             
-#> [59] XVector_0.52.0              matrixStats_1.5.0          
-#> [61] otel_0.2.0                  R.methodsS3_1.8.2          
-#> [63] hms_1.1.4                   ragg_1.5.2                 
-#> [65] evaluate_1.0.5              knitr_1.52                 
-#> [67] GenomicRanges_1.64.0        IRanges_2.46.0             
-#> [69] rlang_1.3.0                 Rcpp_1.1.2                 
-#> [71] glue_1.8.1                  xml2_1.6.0                 
-#> [73] jsonlite_2.0.0              R6_2.6.1                   
-#> [75] MatrixGenerics_1.24.0       systemfonts_1.3.2          
-#> [77] fs_2.1.0
+#>  [7] ggrepel_0.9.8               lattice_0.23-1             
+#>  [9] tzdb_0.5.0                  vctrs_0.7.3                
+#> [11] tools_4.6.2                 curl_8.1.0                 
+#> [13] stats4_4.6.2                parallel_4.6.2             
+#> [15] tibble_3.3.1                R.oo_1.27.1                
+#> [17] pkgconfig_2.0.3             Matrix_1.7-6               
+#> [19] rentrez_1.2.4               RColorBrewer_1.1-3         
+#> [21] S7_0.2.2                    desc_1.4.3                 
+#> [23] S4Vectors_0.50.3            lifecycle_1.0.5            
+#> [25] compiler_4.6.2              farver_2.1.2               
+#> [27] textshaping_1.0.5           statmod_1.5.2              
+#> [29] Seqinfo_1.2.0               codetools_0.2-20           
+#> [31] htmltools_0.5.9             sass_0.4.10                
+#> [33] yaml_2.3.12                 tidyr_1.3.2                
+#> [35] pillar_1.11.1               pkgdown_2.2.1              
+#> [37] jquerylib_0.1.4             R.utils_2.13.0             
+#> [39] BiocParallel_1.46.0         cachem_1.1.0               
+#> [41] DelayedArray_0.38.2         abind_1.4-8                
+#> [43] tidyselect_1.2.1            digest_0.6.39              
+#> [45] purrr_1.2.2                 dplyr_1.2.1                
+#> [47] labeling_0.4.3              cowplot_1.2.0              
+#> [49] fastmap_1.2.0               grid_4.6.2                 
+#> [51] cli_3.6.6                   SparseArray_1.12.3         
+#> [53] magrittr_2.0.5              S4Arrays_1.12.1            
+#> [55] XML_3.99-0.25               withr_3.0.3                
+#> [57] readr_2.2.0                 scales_1.4.0               
+#> [59] rmarkdown_2.32              XVector_0.52.0             
+#> [61] matrixStats_1.5.0           otel_0.2.0                 
+#> [63] R.methodsS3_1.8.2           hms_1.1.4                  
+#> [65] ragg_1.5.2                  evaluate_1.0.5             
+#> [67] knitr_1.52                  GenomicRanges_1.64.0       
+#> [69] IRanges_2.46.0              rlang_1.3.0                
+#> [71] Rcpp_1.1.2                  glue_1.8.1                 
+#> [73] xml2_1.6.0                  jsonlite_2.0.0             
+#> [75] R6_2.6.1                    MatrixGenerics_1.24.0      
+#> [77] systemfonts_1.3.2           fs_2.1.0
 ```
