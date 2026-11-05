@@ -90,9 +90,10 @@ expression (DE) profile with <a href="https://bioconductor.org/packages/fgsea/" 
 <h2 id="loading-signatures">Loading signatures<a class="anchor" aria-label="anchor" href="#loading-signatures"></a>
 </h2>
 <p>Signatures are available for human (<code>"hsa"</code>) and mouse
-(<code>"mmu"</code>). The file is downloaded once and cached. Rows can
-be named by gene symbol or Entrez ID; here we use gene symbols to match
-the microarray annotation below.</p>
+(<code>"mmu"</code>), derived separately for each organism. The file is
+downloaded once and cached. Rows can be named by gene symbol or Entrez
+ID; here we use gene symbols to match the microarray annotation
+below.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">signatures</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/loadSignatures.html">loadSignatures</a></span><span class="op">(</span><span class="st">"hsa"</span>, geneId <span class="op">=</span> <span class="st">"symbol"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">signatures</span><span class="op">)</span></span>
@@ -109,13 +110,13 @@ the microarray annotation below.</p>
 <span><span class="co">#&gt;  [9] "5_AZACYTIDINE"                       </span></span>
 <span><span class="co">#&gt; [10] "5_FLUOROURACIL"</span></span></code></pre></div>
 <p>Each column is one signature, that could include one or several
-perturbations (that were megered together because they couldn’t be
-reliably distinguished). Weights are signed: positive weights mark genes
-that go up after the perturbation and negative weights mark genes that
-go down. For gene-related signatures, the positive direction corresponds
-to up-regulated genes in the gene-activating perturbations (e.g.,
-overexpression) and down-regulated in the gene-inhibiting perturbations
-(e.g., gene knockout).</p>
+related perturbations (that were megeed together because they couldn’t
+be reliably distinguished). Weights are signed: positive weights mark
+genes that go up after the perturbation and negative weights mark genes
+that go down. For gene-related signatures, the positive direction
+corresponds to up-regulated genes in the gene-activating perturbations
+(e.g., overexpression) and down-regulated in the gene-inhibiting
+perturbations (e.g., gene knockout).</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">weights</span> <span class="op">&lt;-</span> <span class="va">signatures</span><span class="op">[</span>, <span class="st">"IFNG"</span><span class="op">]</span></span>
 <span><span class="va">topSets</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/getGeneSets.html">getGeneSets</a></span><span class="op">(</span><span class="va">signatures</span><span class="op">[</span>, <span class="st">"IFNG"</span>, drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span>, topK <span class="op">=</span> <span class="fl">10</span>, direction <span class="op">=</span> <span class="st">"both"</span><span class="op">)</span></span>
@@ -194,9 +195,10 @@ largest weights in each signature, which are the genes that go up after
 the perturbation. Use <code>direction = "down"</code> for the genes that
 go down, or <code>direction = "both"</code> for both (<code>_UP</code>
 and <code>_DN</code> sets). Passing the genes of the DE profile as
-<code>universe</code> picks the top genes among those that fgsea can
-use, so every gene set keeps <code>topK</code> genes. Both comparisons
-come from the same arrays, so they share one gene universe.</p>
+<code>universe</code> picks the top genes only among these genes, so
+every gene set keeps the effective size of <code>topK</code> genes in
+the down stream gene set enrichment analysis. Both comparisons come from
+the same arrays, so they share one gene universe.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">geneSets</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/getGeneSets.html">getGeneSets</a></span><span class="op">(</span><span class="va">signatures</span>, topK <span class="op">=</span> <span class="fl">100</span>, universe <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">ranks</span><span class="op">$</span><span class="va">IFNalpha</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">geneSets</span><span class="op">)</span></span>
@@ -221,6 +223,8 @@ perturbation; a negative NES means it goes the opposite way.</p>
 <div class="section level3">
 <h3 id="ifn-alpha-vs-untreated">IFN-alpha vs untreated<a class="anchor" aria-label="anchor" href="#ifn-alpha-vs-untreated"></a>
 </h3>
+<p>For the IFN-alpha comparison the IFNA signature is the one most
+enriched, with several related ones, including IFNG, further below:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">fgseaRes</span><span class="op">$</span><span class="va">IFNalpha</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">pval</span><span class="op">)</span><span class="op">]</span>, <span class="fl">10</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                             pathway         pval         padj   log2err</span></span>
@@ -258,6 +262,8 @@ perturbation; a negative NES means it goes the opposite way.</p>
 <div class="section level3">
 <h3 id="ifn-gamma-vs-untreated">IFN-gamma vs untreated<a class="anchor" aria-label="anchor" href="#ifn-gamma-vs-untreated"></a>
 </h3>
+<p>Similarly, for the IFN-gamma comparison the IFNG signature is the top
+one, with IFNA signature enriched to a lower degree:</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">fgseaRes</span><span class="op">$</span><span class="va">IFNgamma</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">pval</span><span class="op">)</span><span class="op">]</span>, <span class="fl">10</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                         pathway         pval         padj   log2err        ES</span></span>

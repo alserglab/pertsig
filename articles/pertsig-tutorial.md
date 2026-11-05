@@ -30,10 +30,10 @@ library(ggplot2)
 
 ## Loading signatures
 
-Signatures are available for human (`"hsa"`) and mouse (`"mmu"`). The
-file is downloaded once and cached. Rows can be named by gene symbol or
-Entrez ID; here we use gene symbols to match the microarray annotation
-below.
+Signatures are available for human (`"hsa"`) and mouse (`"mmu"`),
+derived separately for each organism. The file is downloaded once and
+cached. Rows can be named by gene symbol or Entrez ID; here we use gene
+symbols to match the microarray annotation below.
 
 ``` r
 
@@ -53,8 +53,8 @@ head(colnames(signatures), 10)
 #> [10] "5_FLUOROURACIL"
 ```
 
-Each column is one signature, that could include one or several
-perturbations (that were megered together because they couldn’t be
+Each column is one signature, that could include one or several related
+perturbations (that were megeed together because they couldn’t be
 reliably distinguished). Weights are signed: positive weights mark genes
 that go up after the perturbation and negative weights mark genes that
 go down. For gene-related signatures, the positive direction corresponds
@@ -153,9 +153,10 @@ takes the `topK` genes with the largest weights in each signature, which
 are the genes that go up after the perturbation. Use
 `direction = "down"` for the genes that go down, or `direction = "both"`
 for both (`_UP` and `_DN` sets). Passing the genes of the DE profile as
-`universe` picks the top genes among those that fgsea can use, so every
-gene set keeps `topK` genes. Both comparisons come from the same arrays,
-so they share one gene universe.
+`universe` picks the top genes only among these genes, so every gene set
+keeps the effective size of `topK` genes in the down stream gene set
+enrichment analysis. Both comparisons come from the same arrays, so they
+share one gene universe.
 
 ``` r
 
@@ -187,6 +188,9 @@ plotTopSignatures <- function(fgseaRes, stats) {
 ```
 
 ### IFN-alpha vs untreated
+
+For the IFN-alpha comparison the IFNA signature is the one most
+enriched, with several related ones, including IFNG, further below:
 
 ``` r
 
@@ -233,6 +237,9 @@ plotEnrichment(geneSets[["GENE_FAMILY_IFNA"]], ranks$IFNalpha) +
 ![](pertsig-tutorial_files/figure-html/unnamed-chunk-15-1.png)
 
 ### IFN-gamma vs untreated
+
+Similarly, for the IFN-gamma comparison the IFNG signature is the top
+one, with IFNA signature enriched to a lower degree:
 
 ``` r
 
