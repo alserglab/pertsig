@@ -19,6 +19,7 @@ Suggests:
     fgsea,
     GEOquery,
     ggplot2,
+    ggrepel,
     knitr,
     limma,
     rmarkdown
