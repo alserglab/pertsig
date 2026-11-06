@@ -3,7 +3,7 @@ pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
   pertsig-tutorial: pertsig-tutorial.html
-last_built: 2026-11-05T22:31Z
+last_built: 2026-11-06T15:57Z
 urls:
   reference: https://alserglab.github.io/pertsig/reference
   article: https://alserglab.github.io/pertsig/articles
