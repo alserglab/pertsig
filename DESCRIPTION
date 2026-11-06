@@ -2,8 +2,10 @@ Package: pertsig
 Type: Package
 Title: Perturbation Signatures Collection
 Version: 0.1.0
-Authors@R:
-    person("Aigul", "", email = "aigul@wustl.edu", role = c("aut", "cre"))
+Authors@R: c(
+    person("Aigul", "Nugmanova", email = "aigul@wustl.edu", role = c("aut", "cre")), 
+    person("Alexey", "Sergushichev", email = "alsergbox@gmail.com", role = c("aut"))
+)
 Description: Loads pre-computed perturbation signatures (gene-level weights
     from logistic regression models) and turns them into gene sets of their
     top-weighted genes, ready for enrichment analysis with 'fgsea'.
